@@ -1,12 +1,23 @@
 package main
 
 import (
+    "database/sql"
 	"github.com/russross/blackfriday"
+    _ "github.com/mattn/go-sqlite3"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 	"regexp"
+    "log"
+    "fmt"
 )
+
+var db *sql.DB
+var e error
+
+func init() {
+    db, e = sql.Open("sqlite3", "./wiki.db")
+}
+
 
 type Page struct {
 	Title        string
@@ -15,16 +26,40 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := p.Title + ".txt"
-	return ioutil.WriteFile(filename, p.Body, 0600)
+    tx, err := db.Begin()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    stmt, err := tx.Prepare("insert into pages(name, text) values(?, ?)")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    a, err := stmt.Exec(p.Title, p.Body)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(a)
+    return tx.Commit()
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
-	body, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+    rows, err := db.Query(`
+        select id, name, text from pages
+        where id in (select max(id) from pages
+                     where name = ?)
+    `, title)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
+    var body []byte
+    for rows.Next() {
+        var id int
+        var name string
+        rows.Scan(&id, &name, &body)
+    }
 	flags := blackfriday.HTML_SKIP_HTML | blackfriday.HTML_SKIP_STYLE | blackfriday.HTML_TOC | blackfriday.HTML_GITHUB_BLOCKCODE
 	exts := blackfriday.EXTENSION_NO_INTRA_EMPHASIS | blackfriday.EXTENSION_TABLES | blackfriday.EXTENSION_FENCED_CODE | blackfriday.EXTENSION_FOOTNOTES | blackfriday.EXTENSION_HEADER_IDS
 	renderer := blackfriday.HtmlRenderer(flags, "", "")
