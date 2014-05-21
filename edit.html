@@ -1,0 +1,23 @@
+<html>
+<head>
+    <title>{{.Title}}</title>
+    <link href="/static/prism.css" rel="stylesheet" />
+    <link href="/static/styles.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="main">
+        <div>
+        <h1><span class="action">Editing</span> {{.Title}}</h1>
+
+        <form action="/save/{{.Title}}" method="POST">
+        <div>
+            <textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea>
+        </div>
+        <div>
+            <input type="submit" value="Save">
+        </div>
+        </form>
+        </div>
+    </div>
+</body>
+</html>

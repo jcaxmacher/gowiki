@@ -1,0 +1,21 @@
+<html>
+<head>
+    <title>{{.Title}}</title>
+    <link href="/static/prism.css" rel="stylesheet" />
+    <link href="/static/styles.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="main">
+        <p>[<a href="/edit/{{.Title}}">edit</a>]</p>
+        <div>{{.RenderedBody}}</div>
+    </div>
+    <script>
+        var codeblocks = document.querySelectorAll('pre > code');
+        for (var i = 0; i < codeblocks.length; i++) {
+            codeblocks[i].classList.add('language-'+codeblocks[i].parentNode.lang);
+            codeblocks[i].parentNode.classList.add('line-numbers');
+        }
+    </script>
+    <script src="/static/prism.js"></script>
+</body>
+</html>
