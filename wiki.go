@@ -152,7 +152,7 @@ func editHandler(w http.ResponseWriter, r *http.Request, matches []string) {
     title := matches[2]
     var err error
     var p *Page
-    if len(matches) == 4 {
+    if matches[3] != "" {
         version, _ := strconv.ParseInt(matches[3][1:], 0, 64)
         p, err = loadVersionedPage(title, version)
     } else {
@@ -187,6 +187,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, []string)) http.Han
 	}
 }
 
+func mainHandler(w http.ResponseWriter, r *http.Request) {
+    http.Redirect(w, r, "/view/Main", http.StatusFound)
+}
+
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)(|/[0-9]+)$")
 
@@ -197,5 +201,6 @@ func main() {
 	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, r.URL.Path[1:])
 	})
+    http.HandleFunc("/", mainHandler)
 	http.ListenAndServe(":8080", nil)
 }
