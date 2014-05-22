@@ -12,6 +12,7 @@
         <p>[<a href="/edit/{{.Title}}">edit</a>]</p>
         {{end}}
         <div>{{.RenderedBody}}</div>
+        {{if .Versions}}
         <hr />
         <div class="versions">
             <h5>Alternate Versions</h5>
@@ -27,6 +28,7 @@
                 {{end}}
             </ul>
         </div>
+        {{end}}
     </div>
     <script>
         var codeblocks = document.querySelectorAll('pre > code');
