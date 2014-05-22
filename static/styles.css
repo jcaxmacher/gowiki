@@ -34,6 +34,7 @@ nav {
     padding: 1em;
     background-color: #cdc;
     border-radius: 0.5em;
+    margin-left: 1.5em;
 }
 a {
     color: #387a7a;
@@ -50,6 +51,8 @@ nav > ul {
 }
 h1:first-of-type {
     margin-top: 0;
+    margin-bottom: 0;
+    font-size: 3em;
 }
 h1 span.action {
     font-weight: 200;
@@ -88,10 +91,17 @@ pre, pre > code {
     -ms-hyphens: none;
     hyphens: none;
 }
+textarea {
+    width: 100%;
+}
 @media (max-width: 650px) {
     nav {
+        margin-left: 0;
         margin-bottom: 1em;
         float: none;
         width: inherit;
+    }
+    h1:first-of-type {
+        font-size: 2.5em;
     }
 }
