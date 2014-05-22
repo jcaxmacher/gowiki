@@ -18,6 +18,21 @@
         </div>
         </form>
         </div>
+        <hr />
+        <div class="versions">
+            <h5>Alternate Versions</h5>
+            <ul>
+                {{$title := .Title}}
+                {{$currentVersion := .Version}}
+                {{range $element := .Versions}}
+                    {{ if eq $element $currentVersion }}
+                <li>Version {{$element}}</li>
+                    {{ else }}
+                <li><a href="/edit/{{$title}}/{{$element}}">Version {{$element}}</a></li>
+                    {{ end }}
+                {{end}}
+            </ul>
+        </div>
     </div>
 </body>
 </html>

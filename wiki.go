@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"regexp"
+    "strconv"
     "log"
     "fmt"
 )
@@ -23,6 +24,8 @@ type Page struct {
 	Title        string
 	Body         []byte
 	RenderedBody template.HTML
+    Version      int64
+    Versions     []int
 }
 
 func (p *Page) save() error {
@@ -44,6 +47,61 @@ func (p *Page) save() error {
     return tx.Commit()
 }
 
+func renderMarkdown(text []byte) []byte {
+	flags := blackfriday.HTML_SKIP_HTML |
+             blackfriday.HTML_SKIP_STYLE |
+             blackfriday.HTML_TOC |
+             blackfriday.HTML_GITHUB_BLOCKCODE
+	exts := blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+            blackfriday.EXTENSION_TABLES |
+            blackfriday.EXTENSION_FENCED_CODE |
+            blackfriday.EXTENSION_FOOTNOTES |
+            blackfriday.EXTENSION_HEADER_IDS
+	renderer := blackfriday.HtmlRenderer(flags, "", "")
+	return blackfriday.Markdown(text, renderer, exts)
+}
+
+func loadVersions(title string) []int {
+    rows, err := db.Query(`
+        select id from pages
+        where name = ?
+    `, title)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
+    var versions []int
+    for rows.Next() {
+        var id int
+        rows.Scan(&id)
+        versions = append(versions, id)
+    }
+    return versions
+}
+
+func loadVersionedPage(title string, id int64) (*Page, error) {
+    log.Println(id, title)
+    rows, err := db.Query(`
+        select id, name, text from pages
+        where id = ? and name = ?
+    `, id, title)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
+    var body []byte
+    for rows.Next() {
+        var id int
+        var name string
+        rows.Scan(&id, &name, &body)
+        log.Println("Reading versioned row", id)
+    }
+    renderedBody := renderMarkdown(body)
+    versions := loadVersions(title)
+
+	return &Page{Title: title, Body: body, RenderedBody: template.HTML(renderedBody), Versions: versions, Version: id}, nil
+}
+
 func loadPage(title string) (*Page, error) {
     rows, err := db.Query(`
         select id, name, text from pages
@@ -55,17 +113,15 @@ func loadPage(title string) (*Page, error) {
     }
     defer rows.Close()
     var body []byte
+    var id int64
     for rows.Next() {
-        var id int
         var name string
         rows.Scan(&id, &name, &body)
     }
-	flags := blackfriday.HTML_SKIP_HTML | blackfriday.HTML_SKIP_STYLE | blackfriday.HTML_TOC | blackfriday.HTML_GITHUB_BLOCKCODE
-	exts := blackfriday.EXTENSION_NO_INTRA_EMPHASIS | blackfriday.EXTENSION_TABLES | blackfriday.EXTENSION_FENCED_CODE | blackfriday.EXTENSION_FOOTNOTES | blackfriday.EXTENSION_HEADER_IDS
-	renderer := blackfriday.HtmlRenderer(flags, "", "")
-	renderedBody := blackfriday.Markdown(body, renderer, exts)
+    renderedBody := renderMarkdown(body)
+    versions := loadVersions(title)
 
-	return &Page{Title: title, Body: body, RenderedBody: template.HTML(renderedBody)}, nil
+	return &Page{Title: title, Body: body, RenderedBody: template.HTML(renderedBody), Versions: versions, Version: id}, nil
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
@@ -75,8 +131,16 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
-func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
-	p, err := loadPage(title)
+func viewHandler(w http.ResponseWriter, r *http.Request, matches []string) {
+    title := matches[2]
+    var err error
+    var p *Page
+    if matches[3] != "" {
+        version, _ := strconv.ParseInt(matches[3][1:], 0, 64)
+        p, err = loadVersionedPage(title, version)
+    } else {
+        p, err = loadPage(title)
+    }
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		return
@@ -84,15 +148,24 @@ func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	renderTemplate(w, "view", p)
 }
 
-func editHandler(w http.ResponseWriter, r *http.Request, title string) {
-	p, err := loadPage(title)
+func editHandler(w http.ResponseWriter, r *http.Request, matches []string) {
+    title := matches[2]
+    var err error
+    var p *Page
+    if len(matches) == 4 {
+        version, _ := strconv.ParseInt(matches[3][1:], 0, 64)
+        p, err = loadVersionedPage(title, version)
+    } else {
+        p, err = loadPage(title)
+    }
 	if err != nil {
 		p = &Page{Title: title}
 	}
 	renderTemplate(w, "edit", p)
 }
 
-func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
+func saveHandler(w http.ResponseWriter, r *http.Request, matches []string) {
+    title := matches[2]
 	body := r.FormValue("body")
 	p := &Page{Title: title, Body: []byte(body)}
 	err := p.save()
@@ -103,19 +176,19 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
-func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+func makeHandler(fn func(http.ResponseWriter, *http.Request, []string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
 			return
 		}
-		fn(w, r, m[2])
+		fn(w, r, m)
 	}
 }
 
 var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
-var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)(|/[0-9]+)$")
 
 func main() {
 	http.HandleFunc("/view/", makeHandler(viewHandler))

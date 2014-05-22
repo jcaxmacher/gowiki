@@ -16,6 +16,14 @@ body {
 #main > div {
     padding: 2em;
 }
+#main > div.versions {
+    padding: 0.5em 2em 0.5em 2em;
+}
+hr {
+    height: 0.5em;
+    background-color: #E0EEE0;
+    border-left: none;
+}
 nav:before {
     content: 'Table of Contents';
     font-weight: 800;
