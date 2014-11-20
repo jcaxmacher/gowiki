@@ -1,7 +1,19 @@
 <html>
 <head>
     <title>{{.Title}}</title>
+    <meta charset="utf-8"/>
     <link href="/static/prism.css" rel="stylesheet" />
+    <!-- Codemirror -->
+    <link rel="stylesheet" href="/static/codemirror.css">
+    <link rel="stylesheet" href="/static/dialog.css">
+    <link rel="stylesheet" href="/static/pastel-on-dark.css">
+    <script src="/static/codemirror.js"></script>
+    <script src="/static/dialog.js"></script>
+    <script src="/static/searchcursor.js"></script>
+    <script src="/static/markdown.js"></script>
+    <script src="/static/matchbrackets.js"></script>
+    <script src="/static/vim.js"></script>
+
     <link href="/static/styles.css" rel="stylesheet" />
 </head>
 <body>
@@ -11,10 +23,12 @@
 
         <form action="/save/{{.Title}}" method="POST">
         <div>
-            <textarea name="body" rows="20">{{printf "%s" .Body}}</textarea>
+            <textarea id="code" name="code">{{printf "%s" .Body}}</textarea>
+            <div style="font-size: 13px; width: 300px; height: 30px;">Key buffer: <span id="command-display"></span></div>
         </div>
         <div>
             <input type="submit" value="Save">
+            <a href="/view/{{.Title}}">Cancel</a>
         </div>
         </form>
         </div>
@@ -36,5 +50,36 @@
         </div>
         {{end}}
     </div>
+    <script>
+      CodeMirror.commands.save = function(){ alert("Saving"); };
+      var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+        lineNumbers: true,
+        lineWrapping: true,
+        mode: "text/x-markdown",
+        vimMode: true,
+        matchBrackets: true,
+        showCursorWhenSelecting: true,
+        theme: "pastel-on-dark"
+      });
+
+      var charWidth = editor.defaultCharWidth(), basePadding = 4;
+      editor.on("renderLine", function(cm, line, elt) {
+        var off = CodeMirror.countColumn(line.text, null, cm.getOption("tabSize")) * charWidth;
+        elt.style.textIndent = "-" + off + "px";
+        elt.style.paddingLeft = (basePadding + off) + "px";
+      });
+      editor.refresh();
+
+      var commandDisplay = document.getElementById('command-display');
+      var keys = '';
+      CodeMirror.on(editor, 'vim-keypress', function(key) {
+        keys = keys + key;
+        commandDisplay.innerHTML = keys;
+      });
+      CodeMirror.on(editor, 'vim-command-done', function(e) {
+        keys = '';
+        commandDisplay.innerHTML = keys;
+      });
+    </script>
 </body>
 </html>

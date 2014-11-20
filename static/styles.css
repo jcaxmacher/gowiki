@@ -1,6 +1,6 @@
 body {
     background-color: #E0EEE0;;
-    font-family: Georgia, sans-serif;
+    font-family: Calibri, Georgia, sans-serif;
     color: #272822;
 }
 #main {
@@ -35,6 +35,20 @@ nav {
     background-color: #cdc;
     border-radius: 0.5em;
     margin-left: 1.5em;
+    margin-bottom: 1.5em;
+}
+table {
+    width: 100%;
+}
+td, th {
+    padding: 0.4em;
+}
+tbody tr:nth-child(odd) td {
+    background-color: #f1f1f1;
+}
+th {
+    background-color: #528a52;
+    color: white;
 }
 a {
     color: #387a7a;
@@ -62,8 +76,9 @@ h1 span.action {
 :not(pre) > code {
     overflow: auto;
     padding: 3px 4px;
-    background-color: #FFF4f4;
+    background-color: #FFF;
     border: 1px solid #e1e1e8;
+    line-height: 1.6em;
 }
 pre > code, pre {
     background: #272822;
@@ -94,6 +109,10 @@ pre, pre > code {
 textarea {
     width: 100%;
 }
+td ul {
+    margin: 0;
+    padding-left: 1.5em;
+}
 @media (max-width: 650px) {
     nav {
         margin-left: 0;
@@ -104,4 +123,7 @@ textarea {
     h1:first-of-type {
         font-size: 2.5em;
     }
+}
+.codemirror {
+    height: 500px;
 }
